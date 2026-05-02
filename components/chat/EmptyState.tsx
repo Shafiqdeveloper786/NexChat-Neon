@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Zap, MessageCircle } from "lucide-react";
+import { Zap, MessageCircle, Menu } from "lucide-react";
 
 const CYAN   = "#00d4ff";
 const PURPLE = "#7000ff";
@@ -74,7 +74,19 @@ export default function EmptyState() {
         className="text-[11px] text-center max-w-[180px] leading-relaxed"
         style={{ color: "rgba(255,255,255,0.30)" }}
       >
-        Select a conversation or start a new one in the cyberpunk grid.
+        Select a contact to start chatting.
+      </motion.p>
+
+      {/* Mobile-only hint */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="sm:hidden mt-2 flex items-center gap-1.5 text-[10px]"
+        style={{ color: "rgba(0,212,255,0.45)" }}
+      >
+        <Menu className="w-3 h-3" />
+        Tap the menu to browse contacts
       </motion.p>
 
       {/* Start chat button */}

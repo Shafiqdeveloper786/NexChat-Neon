@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Phone, Video, MoreHorizontal } from "lucide-react";
+import { Phone, Video, MoreHorizontal } from "lucide-react";
 import { getPusherClient } from "@/lib/pusher";
 import { HexAvatar }    from "@/components/ui/HexAvatar";
 import MessageBubble    from "@/components/chat/MessageBubble";
@@ -19,7 +18,6 @@ const PURPLE = "#7000ff";
 
 export default function ChatWindow({ conversationId }: { conversationId: string }) {
   const { data: session } = useSession();
-  const router             = useRouter();
   const bottomRef          = useRef<HTMLDivElement>(null);
   const myId               = session?.user?.id;
   const { isOnlineId }     = usePresence();
@@ -171,15 +169,8 @@ export default function ChatWindow({ conversationId }: { conversationId: string 
         }}
       >
         <div className="flex items-center gap-3 min-w-0">
-          {/* Mobile back */}
-          <motion.button
-            onClick={() => router.push("/conversations")}
-            whileHover={{ color: CYAN }}
-            className="sm:hidden w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ color: "rgba(255,255,255,0.40)", background: "rgba(255,255,255,0.05)" }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </motion.button>
+          {/* Mobile: left-side space so avatar isn't hidden under the hamburger */}
+          <div className="sm:hidden w-9 flex-shrink-0" />
 
           {other ? (
             <HexAvatar user={{ ...other, isOnline: otherOnline }} size={38} showOnline />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -14,6 +14,18 @@ export default function ConversationsLayout({ children }: { children: React.Reac
   const params         = useParams();
   const conversationId = params?.conversationId as string | undefined;
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  /* ── Auto-open the sidebar drawer on mobile when no chat is selected.
+     This ensures users are never stuck on the empty state with no navigation.
+     Auto-close when a conversation opens so the chat takes full screen. ── */
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640; // Tailwind `sm` breakpoint
+    if (isMobile && !conversationId) {
+      setDrawerOpen(true);
+    } else if (conversationId) {
+      setDrawerOpen(false);
+    }
+  }, [conversationId]);
 
   return (
     <PresenceProvider>
@@ -68,26 +80,27 @@ export default function ConversationsLayout({ children }: { children: React.Reac
       {/* ═══════════════════════════════════════════════════════════
           CENTER: chat window or empty state
           ═══════════════════════════════════════════════════════════ */}
-      <div className="flex flex-1 overflow-hidden min-w-0 flex-col">
-        {/* Mobile menu toggle (only shown when conversation is open) */}
-        {conversationId && (
-          <div className="sm:hidden absolute top-3.5 left-3 z-30">
-            <motion.button
-              whileHover={{ color: CYAN }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setDrawerOpen(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{
-                color:      "rgba(255,255,255,0.50)",
-                background: "rgba(4,10,24,0.80)",
-                border:     "1px solid rgba(0,212,255,0.16)",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              <Menu className="w-4 h-4" />
-            </motion.button>
-          </div>
-        )}
+      <div className="flex flex-1 overflow-hidden min-w-0 flex-col relative">
+
+        {/* ── Hamburger: ALWAYS visible on mobile (was gated behind
+            conversationId which meant it never showed on empty state) ── */}
+        <div className="sm:hidden absolute top-3.5 left-3 z-30">
+          <motion.button
+            whileHover={{ color: CYAN }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setDrawerOpen(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{
+              color:          "rgba(255,255,255,0.60)",
+              background:     "rgba(4,10,24,0.90)",
+              border:         `1px solid rgba(0,212,255,0.22)`,
+              backdropFilter: "blur(16px)",
+              boxShadow:      `0 0 12px rgba(0,212,255,0.12)`,
+            }}
+          >
+            <Menu className="w-4 h-4" />
+          </motion.button>
+        </div>
 
         {children}
       </div>
