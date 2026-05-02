@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --neon-cyan:     #00F2FF;
+  --neon-purple:   #7000FF;
+  --neon-pink:     #FF2D78;
+  --cyber-bg:      #050505;
+  --cyber-surface: #0d0d12;
+  --cyber-glass:   rgba(255, 255, 255, 0.04);
+  --cyber-border:  rgba(255, 255, 255, 0.08);
+}
+
+@layer base {
+  * { @apply border-white/10; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    background-color: #050505;
+    color: #f1f5f9;
+    font-family: var(--font-jetbrains), monospace;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar       { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0, 242, 255, 0.25); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0, 242, 255, 0.5); }
+}
+
+@layer base {
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-10px); }
+  }
+  @keyframes pulse-online {
+    0%, 100% { box-shadow: 0 0 4px 1px rgba(34,214,122,0.55); }
+    50%       { box-shadow: 0 0 12px 4px rgba(34,214,122,0.90), 0 0 24px 6px rgba(34,214,122,0.30); }
+  }
+  @keyframes welcome-fade {
+    0%   { opacity: 0; transform: translateY(-12px) scale(0.95); }
+    15%  { opacity: 1; transform: translateY(0)    scale(1); }
+    80%  { opacity: 1; transform: translateY(0)    scale(1); }
+    100% { opacity: 0; transform: translateY(-8px)  scale(0.97); }
+  }
+}
+
+@layer utilities {
+  .animate-float          { animation: float          4s   ease-in-out infinite; }
+  .animate-pulse-online   { animation: pulse-online   2.2s ease-in-out infinite; }
+  .animate-welcome-fade   { animation: welcome-fade   2.8s ease-in-out forwards; }
+  .hex-clip               { clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); }
+}
+
+@layer components {
+
+  /* ─── Glass card ──────────────────────────────────────────────────────────── */
+  .glass {
+    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.08];
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .glass-lg {
+    @apply bg-white/[0.05] backdrop-blur-2xl border border-white/[0.10];
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  /* ─── Neon text ───────────────────────────────────────────────────────────── */
+  .text-neon-cyan   { color: var(--neon-cyan);   text-shadow: 0 0 12px rgba(0,242,255,0.6); }
+  .text-neon-purple { color: var(--neon-purple); text-shadow: 0 0 12px rgba(112,0,255,0.6); }
+
+  /* ─── Gradient text ───────────────────────────────────────────────────────── */
+  .gradient-text {
+    @apply text-transparent bg-clip-text;
+    background-image: linear-gradient(135deg, #00F2FF, #7000FF);
+  }
+
+  /* ─── Neon border ─────────────────────────────────────────────────────────── */
+  .border-neon-cyan   { border-color: var(--neon-cyan);   box-shadow: 0 0 10px rgba(0,242,255,0.3); }
+  .border-neon-purple { border-color: var(--neon-purple); box-shadow: 0 0 10px rgba(112,0,255,0.3); }
+
+  /* ─── Cyber input ─────────────────────────────────────────────────────────── */
+  .cyber-input {
+    @apply w-full bg-white/[0.05] border border-white/[0.08] rounded-xl
+           px-4 py-3 text-sm text-white placeholder:text-white/30
+           outline-none transition-all duration-200;
+  }
+  .cyber-input:focus {
+    border-color: rgba(0,242,255,0.5);
+    box-shadow: 0 0 15px rgba(0,242,255,0.15), inset 0 0 15px rgba(0,242,255,0.03);
+  }
+
+  /* ─── Primary button ──────────────────────────────────────────────────────── */
+  .btn-primary {
+    @apply w-full py-3 rounded-xl font-semibold text-sm text-[#050505] tracking-wide
+           transition-all duration-300 select-none cursor-pointer;
+    background: linear-gradient(135deg, #00F2FF, #7000FF);
+    box-shadow: 0 0 20px rgba(0,242,255,0.25);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 30px rgba(0,242,255,0.45), 0 0 60px rgba(112,0,255,0.2);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ─── Ghost button ────────────────────────────────────────────────────────── */
+  .btn-ghost {
+    @apply w-full py-3 rounded-xl font-semibold text-sm text-white/80 tracking-wide
+           bg-white/[0.06] border border-white/[0.10] transition-all duration-200
+           hover:bg-white/[0.10] hover:border-white/20 cursor-pointer select-none;
+  }
+
+  /* ─── Online dot ──────────────────────────────────────────────────────────── */
+  .online-dot {
+    @apply w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#050505];
+    box-shadow: 0 0 6px rgba(52,211,153,0.8);
+  }
+
+  /* ─── Sender bubble ───────────────────────────────────────────────────────── */
+  .bubble-sender {
+    @apply rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm text-white max-w-[72%];
+    background: linear-gradient(135deg, rgba(0,242,255,0.85), rgba(112,0,255,0.85));
+    box-shadow: 0 0 20px rgba(0,242,255,0.2);
+  }
+
+  /* ─── Receiver bubble ─────────────────────────────────────────────────────── */
+  .bubble-receiver {
+    @apply rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-white/90 max-w-[72%]
+           bg-white/[0.07] border border-white/[0.08] backdrop-blur-sm;
+  }
+}
