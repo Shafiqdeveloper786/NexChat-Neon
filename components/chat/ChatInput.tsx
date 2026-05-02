@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Smile, Send, X, Loader2, ImageIcon } from "lucide-react";
 
@@ -40,7 +41,7 @@ async function uploadFile(base64: string): Promise<string | null> {
 }
 
 interface Props {
-  onSend?:          (payload: SendPayload) => void;
+  onSend?:          (payload: SendPayload) => void | Promise<void>;
   conversationId?:  string;
 }
 
@@ -128,7 +129,7 @@ export default function ChatInput({ onSend, conversationId }: Props) {
         }
       }
 
-      await onSend?.(payload);
+      if (onSend) await onSend(payload);
     } catch (err) {
       console.error("[ChatInput]", err);
     } finally {
@@ -243,9 +244,14 @@ export default function ChatInput({ onSend, conversationId }: Props) {
             >
               {attachment.type === "image" ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={attachment.preview} alt="preview"
-                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  <Image
+                    src={attachment.preview}
+                    alt="preview"
+                    width={40}
+                    height={40}
+                    unoptimized
+                    className="rounded-lg object-cover flex-shrink-0"
+                  />
                   <span className="text-xs text-white/55 flex-1 truncate">Image attached</span>
                   <button onClick={() => setAttach(null)}
                     className="text-white/30 hover:text-white/60 transition-colors">

@@ -7,12 +7,17 @@ export default withAuth(
   },
   {
     callbacks: {
+      // token is null  → user is not signed in → deny access → redirect to /login
       authorized: ({ token }) => !!token,
+    },
+    // Explicitly set the sign-in page so NextAuth redirects correctly on both
+    // localhost and the Vercel production domain (NEXTAUTH_URL controls the host).
+    pages: {
+      signIn: "/login",
     },
   }
 );
 
 export const config = {
-  // Protect all app routes except auth pages and API
   matcher: ["/conversations/:path*", "/profile/:path*", "/dashboard/:path*"],
 };
