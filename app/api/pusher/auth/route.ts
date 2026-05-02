@@ -18,6 +18,15 @@ export async function POST(req: Request) {
     const socketId    = params.get("socket_id")!;
     const channelName = params.get("channel_name")!;
 
+    // Security: a user may only subscribe to their own private channel.
+    // Presence channels are public-scoped (any authenticated user can join).
+    if (channelName.startsWith("private-user-")) {
+      const channelUserId = channelName.replace("private-user-", "");
+      if (channelUserId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const auth = pusherServer.authorizeChannel(socketId, channelName, {
       user_id:   session.user.id,
       user_info: {

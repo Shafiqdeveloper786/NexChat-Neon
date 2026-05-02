@@ -31,6 +31,15 @@ export type ChatMessage = {
   sender:    ChatUser;
 };
 
+/* Last-message shape returned inside the conversation list */
+export type ChatLastMessage = {
+  body:      string | null;
+  image:     string | null;
+  fileType:  string | null;
+  createdAt: string;
+  sender:    { id: string; name: string | null };
+};
+
 export type ChatConversation = {
   id:            string;
   name:          string | null;
@@ -38,4 +47,13 @@ export type ChatConversation = {
   lastMessageAt: string;
   users:         ChatUser[];
   messages:      ChatMessage[];
+  /* Notification fields — populated by GET /api/conversations */
+  unreadCount:   number;
+  lastMessage:   ChatLastMessage | null;
+};
+
+/* Pusher private-channel notification payload */
+export type MessageNotification = {
+  conversationId: string;
+  message:        ChatLastMessage & { senderId: string };
 };
