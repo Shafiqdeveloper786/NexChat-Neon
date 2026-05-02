@@ -243,6 +243,7 @@ export default function ChatInput({ onSend, conversationId }: Props) {
             >
               {attachment.type === "image" ? (
                 <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={attachment.preview} alt="preview"
                     className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                   <span className="text-xs text-white/55 flex-1 truncate">Image attached</span>
