@@ -91,6 +91,7 @@ type ConvMeta = {
   conversationId: string;
   unreadCount:    number;
   lastMessage:    { body: string | null; image: string | null } | null;
+  lastMessageAt:  string; // ISO timestamp — used for the recency sort tier
 };
 
 export default function ConversationList() {
@@ -168,12 +169,11 @@ export default function ConversationList() {
 
         next.set(other.id, {
           conversationId: conv.id,
-          // If user explicitly opened this conv → trust DB (handles cross-tab seen).
-          // Otherwise → take max so a race-condition re-fetch can't wipe local badges.
           unreadCount: hasSeen ? dbUnread : Math.max(dbUnread, existing?.unreadCount ?? 0),
           lastMessage: conv.lastMessage
             ? { body: conv.lastMessage.body, image: conv.lastMessage.image }
             : (existing?.lastMessage ?? null),
+          lastMessageAt: conv.lastMessageAt ?? existing?.lastMessageAt ?? "",
         });
 
         nextCtoU.set(conv.id, other.id);
@@ -237,8 +237,9 @@ export default function ConversationList() {
           const existing = next.get(userId);
           next.set(userId, {
             conversationId,
-            unreadCount:  (existing?.unreadCount ?? 0) + 1,
-            lastMessage:  { body: message.body, image: message.image },
+            unreadCount:   (existing?.unreadCount ?? 0) + 1,
+            lastMessage:   { body: message.body, image: message.image },
+            lastMessageAt: new Date().toISOString(), // stamp arrival for sort
           });
           return next;
         });
@@ -318,12 +319,42 @@ export default function ConversationList() {
     signOut({ callbackUrl: "/login" });
   };
 
-  const isOnline  = (u: ChatUser) => isOnlineId(u.id, !!u.isOnline);
-  const filtered  = users.filter(u =>
-    !query ||
-    u.name?.toLowerCase().includes(query.toLowerCase()) ||
-    u.email.toLowerCase().includes(query.toLowerCase())
-  );
+  const isOnline = (u: ChatUser) => isOnlineId(u.id, !!u.isOnline);
+
+  /* ── Smart sort: unread → online → recent activity ─────────────────────
+     This is a pure derived value; it re-evaluates on every render that
+     touches convMeta or onlineIds, so it reacts instantly to Pusher events
+     and presence changes without any extra effects or timers.
+  ── */
+  const filtered = users
+    .filter(u =>
+      !query ||
+      u.name?.toLowerCase().includes(query.toLowerCase()) ||
+      u.email.toLowerCase().includes(query.toLowerCase())
+    )
+    .sort((a, b) => {
+      const metaA    = convMeta.get(a.id);
+      const metaB    = convMeta.get(b.id);
+      const unreadA  = metaA?.unreadCount ?? 0;
+      const unreadB  = metaB?.unreadCount ?? 0;
+      const onlineA  = isOnline(a) ? 1 : 0;
+      const onlineB  = isOnline(b) ? 1 : 0;
+      const timeA    = metaA?.lastMessageAt ?? "";
+      const timeB    = metaB?.lastMessageAt ?? "";
+
+      // Priority 1 — unread: any unread chat floats above everything else
+      if (unreadA > 0 && unreadB === 0) return -1;
+      if (unreadB > 0 && unreadA === 0) return  1;
+
+      // Priority 2 — online status: online users above offline
+      if (onlineA !== onlineB) return onlineB - onlineA;
+
+      // Priority 3 — recency: most recent message first
+      if (timeA && timeB) return timeB.localeCompare(timeA);
+      if (timeA) return -1; // a has activity, b doesn't
+      if (timeB) return  1;
+      return 0;
+    });
 
   const me = session?.user;
   const meUser: ChatUser | null = me
@@ -427,10 +458,11 @@ export default function ConversationList() {
 
                 return (
                   <motion.button
+                    layout
                     key={user.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.03 }}
+                    transition={{ delay: i * 0.03, layout: { duration: 0.22, ease: "easeInOut" } }}
                     onClick={() => !busy && openConversation(user.id)}
                     disabled={busy}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 disabled:opacity-60"

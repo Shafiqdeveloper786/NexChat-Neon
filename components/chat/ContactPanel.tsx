@@ -7,7 +7,7 @@ import { Phone, Mail, MessageCircle, Search, X } from "lucide-react";
 import Image from "next/image";
 import { HexAvatar } from "@/components/ui/HexAvatar";
 import { usePresence } from "@/context/PresenceContext";
-import type { ChatConversation, ChatUser, ChatMessage } from "@/types";
+import type { ChatConversation, ChatMessage } from "@/types";
 
 const CYAN   = "#00d4ff";
 const PURPLE = "#7000ff";
@@ -36,6 +36,9 @@ export default function ContactPanel({ conversationId }: { conversationId: strin
   useEffect(() => { load(); }, [load]);
 
   const other       = conv?.users.find(u => u.id !== myId) ?? null;
+
+  // sha....@gmail.com — reveals first 3 chars then masks local part
+  const maskedEmail = other?.email.replace(/(.{3})(.*)(?=@)/, "$1....") ?? "";
   const otherOnline = other ? isOnlineId(other.id, !!other.isOnline) : false;
   const sharedImgs  = msgs.filter(m => m.image).slice(-6);
   const results    = search
@@ -105,7 +108,7 @@ export default function ContactPanel({ conversationId }: { conversationId: strin
           />
           <Detail icon={<Mail className="w-3 h-3" style={{ color: CYAN }} />}
             bg={`rgba(0,212,255,0.10)`}
-            text={other.email}
+            text={maskedEmail}
           />
           <Detail icon={<Phone className="w-3 h-3" style={{ color: PURPLE }} />}
             bg={`rgba(112,0,255,0.10)`}
