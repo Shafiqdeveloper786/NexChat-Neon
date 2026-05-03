@@ -116,9 +116,13 @@ export default function ConversationList() {
   const convToUser = useRef<Map<string, string>>(new Map());
 
   // Set of conversationIds the user has EXPLICITLY opened this session.
-  // Used so that DB re-fetches can safely reset those badges to DB value
-  // while leaving unread badges for conversations the user hasn't visited.
   const seenConvIds = useRef<Set<string>>(new Set());
+
+  // Mirror of activeConvId kept in a ref so the Pusher closure can read the
+  // CURRENT value without being in the effect's dep array (which would cause
+  // channel re-subscribe on every navigation).
+  const activeConvIdRef = useRef<string | undefined>(activeConvId);
+  useEffect(() => { activeConvIdRef.current = activeConvId; }, [activeConvId]);
 
   /* ── Welcome overlay ── */
   useEffect(() => {
@@ -225,8 +229,14 @@ export default function ConversationList() {
     ch.bind("new-notification", (data: MessageNotification) => {
       const { conversationId, message } = data;
 
-      // Skip badge for the conversation the user is currently reading
-      if (conversationId === activeConvId) return;
+      // Read the LIVE active conversation from the ref — never stale.
+      if (conversationId === activeConvIdRef.current) {
+        // Message arrived while this chat is open → mark seen immediately,
+        // no badge, no preview update.
+        fetch(`/api/conversations/${conversationId}/seen`, { method: "PATCH" })
+          .catch(() => {});
+        return;
+      }
 
       const userId = convToUser.current.get(conversationId);
 
