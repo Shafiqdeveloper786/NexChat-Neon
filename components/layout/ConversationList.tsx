@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter, useParams }  from "next/navigation";
-import { useSession, signOut }   from "next-auth/react";
+import { useRouter, useParams }    from "next/navigation";
+import { useSession, signOut }     from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Zap, Settings, LogOut, UserPlus, X, Check } from "lucide-react";
-import { getPusherClient }   from "@/lib/pusher";
-import { HexAvatar }         from "@/components/ui/HexAvatar";
-import { usePresence }        from "@/context/PresenceContext";
+import { getPusherClient }         from "@/lib/pusher";
+import { HexAvatar }               from "@/components/ui/HexAvatar";
+import { usePresence }             from "@/context/PresenceContext";
 import type { ChatUser, ChatConversation, MessageNotification } from "@/types";
 
-const CYAN   = "#00d4ff";
+const CYAN  = "#00d4ff";
 const PURPLE = "#7000ff";
-const PINK   = "#ff2d78";
-const GREEN  = "#22d67a";
+const PINK  = "#ff2d78";
+const GREEN = "#22d67a";
 
 /* ─── Welcome overlay ─────────────────────────────────────────────────── */
 function WelcomeOverlay({ name }: { name: string }) {
@@ -25,13 +25,11 @@ function WelcomeOverlay({ name }: { name: string }) {
       <div
         className="px-6 py-3 rounded-2xl text-sm font-semibold tracking-wide whitespace-nowrap"
         style={{
-          background:     "rgba(4,10,24,0.94)",
-          backdropFilter: "blur(30px)",
-          border:         `1px solid ${CYAN}50`,
-          boxShadow:      `0 0 30px ${CYAN}22, 0 8px 32px rgba(0,0,0,0.6)`,
-          color:          "rgba(255,255,255,0.92)",
-          fontFamily:     "'Orbitron',monospace",
-          letterSpacing:  "0.08em",
+          background: "rgba(4,10,24,0.94)", backdropFilter: "blur(30px)",
+          border: `1px solid ${CYAN}50`,
+          boxShadow: `0 0 30px ${CYAN}22, 0 8px 32px rgba(0,0,0,0.6)`,
+          color: "rgba(255,255,255,0.92)", fontFamily: "'Orbitron',monospace",
+          letterSpacing: "0.08em",
         }}
       >
         <span style={{ color: CYAN }}>⚡</span>&nbsp; Welcome back,&nbsp;
@@ -46,15 +44,14 @@ function LogoutToast() {
   return (
     <motion.div
       initial={{ opacity: 0, y: -16, scale: 0.94 }}
-      animate={{ opacity: 1, y: 0,   scale: 1 }}
-      exit={{   opacity: 0, y: -12,  scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -12, scale: 0.96 }}
       transition={{ duration: 0.22 }}
       className="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2.5 px-5 py-3 rounded-2xl whitespace-nowrap"
       style={{
-        background:     "rgba(4,10,24,0.96)",
-        backdropFilter: "blur(30px)",
-        border:         `1px solid rgba(34,214,122,0.40)`,
-        boxShadow:      `0 0 28px rgba(34,214,122,0.18), 0 8px 32px rgba(0,0,0,0.6)`,
+        background: "rgba(4,10,24,0.96)", backdropFilter: "blur(30px)",
+        border: `1px solid rgba(34,214,122,0.40)`,
+        boxShadow: `0 0 28px rgba(34,214,122,0.18), 0 8px 32px rgba(0,0,0,0.6)`,
       }}
     >
       <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
@@ -69,22 +66,19 @@ function LogoutToast() {
   );
 }
 
-/* ─── Unread badge ─────────────────────────────────────────────────────── */
+/* ─── Neon unread badge ────────────────────────────────────────────────── */
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <motion.div
       key={count}
       initial={{ scale: 0.5, opacity: 0 }}
-      animate={{ scale: 1,   opacity: 1 }}
+      animate={{ scale: 1, opacity: 1 }}
       className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1"
       style={{
         background: GREEN,
         boxShadow:  `0 0 8px ${GREEN}BB, 0 0 16px ${GREEN}55`,
-        fontSize:   "9px",
-        fontWeight: 700,
-        color:      "#050505",
-        lineHeight: 1,
+        fontSize: "9px", fontWeight: 700, color: "#050505", lineHeight: 1,
       }}
     >
       {count > 99 ? "99+" : count}
@@ -92,7 +86,7 @@ function UnreadBadge({ count }: { count: number }) {
   );
 }
 
-/* ─── Per-user notification state ──────────────────────────────────────── */
+/* ─── Per-conversation metadata ────────────────────────────────────────── */
 type ConvMeta = {
   conversationId: string;
   unreadCount:    number;
@@ -107,19 +101,25 @@ export default function ConversationList() {
   const myId                 = session?.user?.id;
   const { onlineIds, isOnlineId } = usePresence();
 
-  const [users, setUsers]     = useState<ChatUser[]>([]);
-  const [query, setQuery]     = useState("");
-  const [loading, setLoading] = useState(true);
-  const [opening, setOpening] = useState<string | null>(null);
+  const [users, setUsers]         = useState<ChatUser[]>([]);
+  const [query, setQuery]         = useState("");
+  const [loading, setLoading]     = useState(true);
+  const [opening, setOpening]     = useState<string | null>(null);
   const [showWelcome, setWelcome] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // userId → conversation metadata (unread count + last message)
-  const [convMeta, setConvMeta] = useState<Map<string, ConvMeta>>(new Map());
-  // conversationId → userId reverse lookup (for Pusher notifications)
+  // userId → conversation metadata (unread count + last message preview)
+  const [convMeta, setConvMeta]   = useState<Map<string, ConvMeta>>(new Map());
+
+  // conversationId → userId   (reverse lookup for Pusher events)
   const convToUser = useRef<Map<string, string>>(new Map());
 
-  /* ── Welcome overlay once per browser session ── */
+  // Set of conversationIds the user has EXPLICITLY opened this session.
+  // Used so that DB re-fetches can safely reset those badges to DB value
+  // while leaving unread badges for conversations the user hasn't visited.
+  const seenConvIds = useRef<Set<string>>(new Set());
+
+  /* ── Welcome overlay ── */
   useEffect(() => {
     if (!session?.user?.name) return;
     const key = `nxc_welcomed_${myId}`;
@@ -131,7 +131,7 @@ export default function ConversationList() {
     }
   }, [session?.user?.name, myId]);
 
-  /* ── Fetch users list ── */
+  /* ── Fetch user list ── */
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
@@ -141,38 +141,57 @@ export default function ConversationList() {
     }
   }, []);
 
-  /* ── Fetch conversations for unread counts + last message previews ── */
+  /* ── Fetch conversations — MERGES with local state instead of replacing ──
+     Rule:
+       • Conversations the user has SEEN this session → trust DB count (may be 0)
+       • Conversations NOT yet seen → take max(DB, local) so Pusher badges survive
+         periodic re-fetches and session-load re-renders.
+  ── */
   const fetchConversations = useCallback(async () => {
+    if (!myId) return;
     const res = await fetch("/api/conversations");
-    if (!res.ok || !myId) return;
+    if (!res.ok) return;
     const convs: ChatConversation[] = await res.json();
 
-    const nextMeta  = new Map<string, ConvMeta>();
-    const nextCtoU  = new Map<string, string>();
+    const nextCtoU = new Map<string, string>();
 
-    for (const conv of convs) {
-      const other = conv.users.find(u => u.id !== myId);
-      if (!other) continue;
-      nextMeta.set(other.id, {
-        conversationId: conv.id,
-        unreadCount:    conv.unreadCount ?? 0,
-        lastMessage:    conv.lastMessage
-          ? { body: conv.lastMessage.body, image: conv.lastMessage.image }
-          : null,
-      });
-      nextCtoU.set(conv.id, other.id);
-    }
+    setConvMeta(prev => {
+      const next = new Map(prev);
 
-    setConvMeta(nextMeta);
+      for (const conv of convs) {
+        const other = conv.users.find(u => u.id !== myId);
+        if (!other) continue;
+
+        const dbUnread  = conv.unreadCount ?? 0;
+        const existing  = prev.get(other.id);
+        const hasSeen   = seenConvIds.current.has(conv.id);
+
+        next.set(other.id, {
+          conversationId: conv.id,
+          // If user explicitly opened this conv → trust DB (handles cross-tab seen).
+          // Otherwise → take max so a race-condition re-fetch can't wipe local badges.
+          unreadCount: hasSeen ? dbUnread : Math.max(dbUnread, existing?.unreadCount ?? 0),
+          lastMessage: conv.lastMessage
+            ? { body: conv.lastMessage.body, image: conv.lastMessage.image }
+            : (existing?.lastMessage ?? null),
+        });
+
+        nextCtoU.set(conv.id, other.id);
+      }
+
+      return next;
+    });
+
     convToUser.current = nextCtoU;
   }, [myId]);
 
+  /* ── Initial load ── */
   useEffect(() => {
     fetchUsers();
     fetchConversations();
   }, [fetchUsers, fetchConversations]);
 
-  /* ── Refresh every 60 s ── */
+  /* ── 60 s background refresh ── */
   useEffect(() => {
     const id = setInterval(() => {
       fetchUsers();
@@ -181,7 +200,7 @@ export default function ConversationList() {
     return () => clearInterval(id);
   }, [fetchUsers, fetchConversations]);
 
-  /* ── Pusher: new user joined → refresh user list ── */
+  /* ── Presence: new member → refresh user list ── */
   useEffect(() => {
     const client = getPusherClient();
     if (!client || !myId) return;
@@ -191,71 +210,74 @@ export default function ConversationList() {
     return () => { client.unsubscribe("presence-nexchat"); };
   }, [myId, fetchUsers]);
 
-  /* ── Pusher: private-user-{myId} → real-time unread badge updates ── */
+  /* ── Private channel: real-time badge increments ──────────────────────
+     Only the private-user-{myId} channel is used here — one subscription,
+     no N-per-conversation subscriptions.
+     We update ONLY the affected row in convMeta (no full re-fetch).
+  ── */
   useEffect(() => {
     const client = getPusherClient();
     if (!client || !myId) return;
 
-    const channelName = `private-user-${myId}`;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ch: any = client.subscribe(channelName);
+    const ch: any = client.subscribe(`private-user-${myId}`);
 
     ch.bind("new-notification", (data: MessageNotification) => {
       const { conversationId, message } = data;
 
-      // Don't badge the conversation that's currently open
+      // Skip badge for the conversation the user is currently reading
       if (conversationId === activeConvId) return;
 
       const userId = convToUser.current.get(conversationId);
 
       if (userId) {
-        // Known conversation — increment badge
+        // Hot path: known conversation → increment badge in O(1) with no fetch
         setConvMeta(prev => {
-          const next = new Map(prev);
+          const next     = new Map(prev);
           const existing = next.get(userId);
-          if (existing) {
-            next.set(userId, {
-              ...existing,
-              unreadCount: existing.unreadCount + 1,
-              lastMessage: { body: message.body, image: message.image },
-            });
-          } else {
-            next.set(userId, {
-              conversationId,
-              unreadCount: 1,
-              lastMessage: { body: message.body, image: message.image },
-            });
-            convToUser.current.set(conversationId, userId);
-          }
+          next.set(userId, {
+            conversationId,
+            unreadCount:  (existing?.unreadCount ?? 0) + 1,
+            lastMessage:  { body: message.body, image: message.image },
+          });
           return next;
         });
       } else {
-        // First message from this person — full refresh to discover the new conversation
+        // Cold path: first-ever message from this user → discover the new
+        // conversation via a single DB fetch, then let the merge logic handle it.
         fetchConversations();
         fetchUsers();
       }
     });
 
-    return () => { client.unsubscribe(channelName); };
-  }, [myId, activeConvId, fetchConversations, fetchUsers]);
+    return () => { client.unsubscribe(`private-user-${myId}`); };
+    // activeConvId intentionally omitted from deps — we read it at event time
+    // via a ref to avoid re-subscribing every time the active chat changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myId, fetchConversations, fetchUsers]);
 
-  /* ── Auto-clear badge when user opens a conversation ── */
+  /* ── Auto-clear badge when active conversation changes ────────────────
+     Runs when the user navigates INTO a conversation (activeConvId is set).
+     1. Immediately zero the local badge.
+     2. Add to seenConvIds so future re-fetches won't restore a stale count.
+     3. Persist to DB (background — fire and forget).
+  ── */
   useEffect(() => {
     if (!activeConvId) return;
+    seenConvIds.current.add(activeConvId);
+
     const userId = convToUser.current.get(activeConvId);
-    if (!userId) return;
-
-    // Reset badge locally immediately
-    setConvMeta(prev => {
-      const next = new Map(prev);
-      const meta = next.get(userId);
-      if (meta && meta.unreadCount > 0) {
+    if (userId) {
+      setConvMeta(prev => {
+        const meta = prev.get(userId);
+        if (!meta || meta.unreadCount === 0) return prev; // no-op if already 0
+        const next = new Map(prev);
         next.set(userId, { ...meta, unreadCount: 0 });
-      }
-      return next;
-    });
+        return next;
+      });
+    }
 
-    // Persist seen status to DB in the background
+    // Persist "seen" to DB so badge doesn't come back after a page refresh
     fetch(`/api/conversations/${activeConvId}/seen`, { method: "PATCH" }).catch(() => {});
   }, [activeConvId]);
 
@@ -263,23 +285,24 @@ export default function ConversationList() {
   const openConversation = async (userId: string) => {
     setOpening(userId);
 
-    // Optimistically clear badge
+    // Optimistically clear badge before the API round-trip
     setConvMeta(prev => {
+      const meta = prev.get(userId);
+      if (!meta || meta.unreadCount === 0) return prev;
       const next = new Map(prev);
-      const meta = next.get(userId);
-      if (meta) next.set(userId, { ...meta, unreadCount: 0 });
+      next.set(userId, { ...meta, unreadCount: 0 });
       return next;
     });
 
     try {
       const res = await fetch("/api/conversations", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userId }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
       });
       if (res.ok) {
         const conv = await res.json();
-        // Mark seen immediately
+        // Mark as seen locally + in DB
+        seenConvIds.current.add(conv.id);
         fetch(`/api/conversations/${conv.id}/seen`, { method: "PATCH" }).catch(() => {});
         router.push(`/conversations/${conv.id}`);
       }
@@ -288,16 +311,15 @@ export default function ConversationList() {
     }
   };
 
-  /* ── Logout with toast ── */
+  /* ── Logout ── */
   const handleLogout = async () => {
     setLoggingOut(true);
     await new Promise(r => setTimeout(r, 1400));
     signOut({ callbackUrl: "/login" });
   };
 
-  const isOnline = (u: ChatUser) => isOnlineId(u.id, !!u.isOnline);
-
-  const filtered = users.filter(u =>
+  const isOnline  = (u: ChatUser) => isOnlineId(u.id, !!u.isOnline);
+  const filtered  = users.filter(u =>
     !query ||
     u.name?.toLowerCase().includes(query.toLowerCase()) ||
     u.email.toLowerCase().includes(query.toLowerCase())
@@ -320,42 +342,31 @@ export default function ConversationList() {
       <div
         className="flex flex-col h-full w-full"
         style={{
-          background:           "rgba(4,10,24,0.82)",
-          backdropFilter:       "blur(42px)",
+          background: "rgba(4,10,24,0.82)", backdropFilter: "blur(42px)",
           WebkitBackdropFilter: "blur(42px)",
-          borderRight:          "1px solid rgba(0,212,255,0.13)",
-          boxShadow:            "inset -1px 0 0 rgba(0,212,255,0.06)",
+          borderRight: "1px solid rgba(0,212,255,0.13)",
+          boxShadow: "inset -1px 0 0 rgba(0,212,255,0.06)",
         }}
       >
         {/* ── Header ── */}
-        <div
-          className="flex items-center justify-between px-4 pt-5 pb-4 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(0,212,255,0.08)" }}
-        >
+        <div className="flex items-center justify-between px-4 pt-5 pb-4 flex-shrink-0"
+          style={{ borderBottom: "1px solid rgba(0,212,255,0.08)" }}>
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: `linear-gradient(135deg,${CYAN},${PURPLE})`, boxShadow: `0 0 16px ${CYAN}55` }}
-            >
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg,${CYAN},${PURPLE})`, boxShadow: `0 0 16px ${CYAN}55` }}>
               <Zap className="w-4 h-4 text-[#050505]" fill="currentColor" />
             </div>
-            <span
-              className="font-black text-base tracking-[0.18em] uppercase"
+            <span className="font-black text-base tracking-[0.18em] uppercase"
               style={{
-                fontFamily: "'Orbitron',monospace",
-                color:      CYAN,
+                fontFamily: "'Orbitron',monospace", color: CYAN,
                 textShadow: `0 0 18px ${CYAN}EE, 0 0 40px ${CYAN}66, 0 0 80px ${CYAN}22`,
-              }}
-            >
+              }}>
               NexChat
             </span>
           </div>
-          <motion.button
-            whileHover={{ color: CYAN }}
+          <motion.button whileHover={{ color: CYAN }}
             className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-            style={{ color: "rgba(255,255,255,0.28)" }}
-            title="Add contact"
-          >
+            style={{ color: "rgba(255,255,255,0.28)" }} title="Add contact">
             <UserPlus className="w-4 h-4" />
           </motion.button>
         </div>
@@ -366,8 +377,7 @@ export default function ConversationList() {
             <Search className="absolute left-3 w-3.5 h-3.5 pointer-events-none"
               style={{ color: "rgba(0,212,255,0.40)" }} />
             <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
+              value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Search people..."
               className="w-full pl-9 pr-8 py-2.5 rounded-xl text-xs text-white outline-none placeholder:text-white/25 transition-all duration-200"
               style={{ background: "rgba(0,14,34,0.62)", border: "1px solid rgba(0,212,255,0.18)" }}
@@ -408,11 +418,11 @@ export default function ConversationList() {
           ) : (
             <AnimatePresence>
               {filtered.map((user, i) => {
-                const online  = isOnline(user);
-                const busy    = opening === user.id;
-                const meta    = convMeta.get(user.id);
-                const unread  = meta?.unreadCount ?? 0;
-                const lastMsg = meta?.lastMessage ?? null;
+                const online   = isOnline(user);
+                const busy     = opening === user.id;
+                const meta     = convMeta.get(user.id);
+                const unread   = meta?.unreadCount ?? 0;
+                const lastMsg  = meta?.lastMessage ?? null;
                 const isActive = meta?.conversationId === activeConvId;
 
                 return (
@@ -434,47 +444,40 @@ export default function ConversationList() {
                     <HexAvatar user={{ ...user, isOnline: online }} size={44} showOnline />
 
                     <div className="flex-1 min-w-0">
-                      {/* Name row */}
+                      {/* Name + badge row */}
                       <div className="flex items-center justify-between gap-1">
-                        <span className="block text-[13px] font-semibold text-white/90 truncate">
+                        <span className="text-[13px] font-semibold text-white/90 truncate block">
                           {user.name || user.email.split("@")[0]}
                         </span>
                         <UnreadBadge count={unread} />
                       </div>
 
-                      {/* Status / last message row */}
+                      {/* Sub-row: neon green preview when unread, online dot otherwise */}
                       {unread > 0 && lastMsg ? (
-                        /* Unread: show last message preview in neon green */
-                        <p
-                          className="text-[10.5px] font-semibold truncate mt-0.5"
-                          style={{ color: GREEN }}
-                        >
-                          {lastMsg.image ? "📷 Photo" : (lastMsg.body ?? "")}
+                        <p className="text-[10.5px] font-semibold truncate mt-0.5"
+                          style={{
+                            color:      GREEN,
+                            textShadow: `0 0 8px ${GREEN}88`,
+                          }}>
+                          {lastMsg.image ? "📷 Photo" : (lastMsg.body ?? "New message")}
                         </p>
                       ) : (
-                        /* No unread: show online/offline dot */
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span
                             className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${online ? "animate-pulse-online" : ""}`}
                             style={{ background: online ? GREEN : "rgba(255,255,255,0.22)" }}
                           />
-                          <span
-                            className="text-[10.5px] font-medium"
-                            style={{ color: online ? "rgba(34,214,122,0.82)" : "rgba(255,255,255,0.30)" }}
-                          >
-                            {online ? "Online" : lastMsg?.body
-                              ? <span className="truncate">{lastMsg.body}</span>
-                              : "Away"}
+                          <span className="text-[10.5px] font-medium truncate"
+                            style={{ color: online ? "rgba(34,214,122,0.82)" : "rgba(255,255,255,0.30)" }}>
+                            {online ? "Online" : lastMsg?.body ?? "Away"}
                           </span>
                         </div>
                       )}
                     </div>
 
                     {busy && (
-                      <div
-                        className="w-4 h-4 rounded-full border-2 animate-spin flex-shrink-0"
-                        style={{ borderColor: `${CYAN}55`, borderTopColor: CYAN }}
-                      />
+                      <div className="w-4 h-4 rounded-full border-2 animate-spin flex-shrink-0"
+                        style={{ borderColor: `${CYAN}55`, borderTopColor: CYAN }} />
                     )}
                   </motion.button>
                 );
@@ -483,11 +486,9 @@ export default function ConversationList() {
           )}
         </div>
 
-        {/* ── Bottom: current user profile ── */}
-        <div
-          className="flex-shrink-0 mx-2 mb-2 px-3 py-3 rounded-xl"
-          style={{ background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.10)" }}
-        >
+        {/* ── Your Profile ── */}
+        <div className="flex-shrink-0 mx-2 mb-2 px-3 py-3 rounded-xl"
+          style={{ background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.10)" }}>
           <div className="text-[8.5px] font-bold tracking-[0.3em] uppercase mb-2" style={{ color: `${CYAN}50` }}>
             Your Profile
           </div>
@@ -501,17 +502,15 @@ export default function ConversationList() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ color: "rgba(255,255,255,0.15)" }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ color: "rgba(255,255,255,0.15)" }}>
                 <Settings className="w-3.5 h-3.5" />
               </div>
               <motion.button
                 whileHover={{ color: PINK }}
-                onClick={handleLogout}
-                disabled={loggingOut}
+                onClick={handleLogout} disabled={loggingOut}
                 className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
-                style={{ color: "rgba(255,255,255,0.28)" }}
-                title="Sign out"
-              >
+                style={{ color: "rgba(255,255,255,0.28)" }} title="Sign out">
                 <LogOut className="w-3.5 h-3.5" />
               </motion.button>
             </div>
