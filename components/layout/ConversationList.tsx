@@ -167,13 +167,18 @@ export default function ConversationList() {
         const other = conv.users.find(u => u.id !== myId);
         if (!other) continue;
 
-        const dbUnread  = conv.unreadCount ?? 0;
-        const existing  = prev.get(other.id);
-        const hasSeen   = seenConvIds.current.has(conv.id);
+        const dbUnread    = conv.unreadCount ?? 0;
+        const existing    = prev.get(other.id);
+        const hasSeen     = seenConvIds.current.has(conv.id);
+        // If this is the conversation currently open, always treat as read — even
+        // if the PATCH /seen hasn't landed yet (race-condition guard).
+        const isActiveNow = activeConvIdRef.current === conv.id;
 
         next.set(other.id, {
           conversationId: conv.id,
-          unreadCount: hasSeen ? dbUnread : Math.max(dbUnread, existing?.unreadCount ?? 0),
+          unreadCount: isActiveNow ? 0
+            : hasSeen   ? dbUnread
+            : Math.max(dbUnread, existing?.unreadCount ?? 0),
           lastMessage: conv.lastMessage
             ? { body: conv.lastMessage.body, image: conv.lastMessage.image }
             : (existing?.lastMessage ?? null),
@@ -231,10 +236,26 @@ export default function ConversationList() {
 
       // Read the LIVE active conversation from the ref — never stale.
       if (conversationId === activeConvIdRef.current) {
-        // Message arrived while this chat is open → mark seen immediately,
-        // no badge, no preview update.
+        // Message arrived while this chat is open.
+        // • Mark seen in DB immediately (no badge should ever show).
+        // • Still update lastMessage + lastMessageAt so the row jumps to the
+        //   top of the sort (requirement: active chat = most recent, but no badge).
         fetch(`/api/conversations/${conversationId}/seen`, { method: "PATCH" })
           .catch(() => {});
+
+        const userId = convToUser.current.get(conversationId);
+        if (userId) {
+          setConvMeta(prev => {
+            const next = new Map(prev);
+            next.set(userId, {
+              conversationId,
+              unreadCount:   0,                             // always 0 — chat is open
+              lastMessage:   { body: message.body, image: message.image },
+              lastMessageAt: new Date().toISOString(),      // keeps sort position fresh
+            });
+            return next;
+          });
+        }
         return;
       }
 
@@ -277,16 +298,20 @@ export default function ConversationList() {
     if (!activeConvId) return;
     seenConvIds.current.add(activeConvId);
 
-    const userId = convToUser.current.get(activeConvId);
-    if (userId) {
-      setConvMeta(prev => {
-        const meta = prev.get(userId);
-        if (!meta || meta.unreadCount === 0) return prev; // no-op if already 0
-        const next = new Map(prev);
-        next.set(userId, { ...meta, unreadCount: 0 });
-        return next;
-      });
-    }
+    // Scan ALL convMeta entries for the matching conversationId.
+    // This is intentionally independent of convToUser so it works even before
+    // fetchConversations has populated that map (e.g. on initial page load).
+    setConvMeta(prev => {
+      let changed = false;
+      const next  = new Map(prev);
+      for (const [userId, meta] of Array.from(prev.entries())) {
+        if (meta.conversationId === activeConvId && meta.unreadCount !== 0) {
+          next.set(userId, { ...meta, unreadCount: 0 });
+          changed = true;
+        }
+      }
+      return changed ? next : prev; // bail early if nothing to clear
+    });
 
     // Persist "seen" to DB so badge doesn't come back after a page refresh
     fetch(`/api/conversations/${activeConvId}/seen`, { method: "PATCH" }).catch(() => {});
